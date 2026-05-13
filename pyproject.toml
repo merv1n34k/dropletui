@@ -1,0 +1,30 @@
+[project]
+name = "dropletui"
+version = "0.1.0"
+description = "Shared PySide6 UI components for droplet desktop applications"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Oleksii Stroganov", email = "merv1n@proton.me" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "PySide6>=6.7",
+    "pyqtgraph>=0.13",
+]
+
+[project.scripts]
+dropletui-demo = "dropletui.demo:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"
