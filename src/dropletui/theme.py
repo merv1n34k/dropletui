@@ -68,9 +68,8 @@ class Theme:
     SPLITTER_MARK_THICKNESS = 5
     SPLITTER_MARK_LENGTH_RATIO = 0.5
     SEPARATOR_THICKNESS = SPLITTER_MARK_THICKNESS
-
-    CONTROL_INLINE = _ControlSize(min_height=20, padding="2px 8px", font_size=FONT_SIZE_BODY)
-    CONTROL_DEFAULT = _ControlSize(min_height=24, padding="3px 10px", font_size=FONT_SIZE_BODY)
+    CONTROL_INLINE = _ControlSize(min_height=24, padding="2px 8px", font_size=FONT_SIZE_BODY)
+    CONTROL_DEFAULT = _ControlSize(min_height=26, padding="3px 10px", font_size=FONT_SIZE_BODY)
     CONTROL_LARGE = _ControlSize(min_height=36, padding="8px 14px", font_size=FONT_SIZE_BODY)
     CONTROL_STAGE = _ControlSize(min_height=56, padding="10px 16px", font_size=FONT_SIZE_BODY)
 
@@ -128,11 +127,11 @@ def button_qss(kind: str = "neutral", *, size: str = "default", flat: bool = Fal
     token = control_size(size)
     radius = "0" if flat else f"{Theme.RADIUS}px"
     padding = "0" if flat else token.padding
-    min_height = "" if flat else f"min-height: {token.min_height}px;"
+    height = "" if flat else f"min-height: {token.min_height}px; max-height: {token.min_height}px;"
     return (
         f"QPushButton {{ background-color: {bg}; border: none; color: {Theme.TEXT_WHITE}; "
         f"border-radius: {radius}; padding: {padding}; font-size: {token.font_size}px; "
-        f"font-weight: 600; {min_height} }}"
+        f"font-weight: 600; {height} }}"
         f"QPushButton:hover {{ background-color: {hover}; }}"
         f"QPushButton:pressed {{ background-color: {Theme.BG_CONTROL_PRESSED}; }}"
         f"QPushButton:disabled {{ background-color: {Theme.DISABLED_BG}; "
@@ -163,7 +162,6 @@ def configure_monospace_font(font, point_size: int | None = None) -> None:
 
 
 def stylesheet() -> str:
-    inline = Theme.CONTROL_INLINE
     default = Theme.CONTROL_DEFAULT
     return f"""
 QWidget {{
@@ -181,8 +179,8 @@ QLineEdit, QTextEdit, QPlainTextEdit {{
     background-color: {Theme.INPUT_BG};
     border: 1px solid {Theme.INPUT_BORDER};
     border-radius: {Theme.RADIUS}px;
-    min-height: {inline.min_height}px;
-    padding: {inline.padding};
+    min-height: {default.min_height}px;
+    padding: {default.padding};
     color: {Theme.TEXT_WHITE};
 }}
 QLineEdit:hover, QTextEdit:hover, QPlainTextEdit:hover {{
@@ -214,8 +212,8 @@ QComboBox {{
     background-color: {Theme.INPUT_BG};
     border: 1px solid {Theme.INPUT_BORDER};
     border-radius: {Theme.RADIUS}px;
-    min-height: {inline.min_height}px;
-    padding: {inline.padding};
+    min-height: {default.min_height}px;
+    padding: {default.padding};
     color: {Theme.TEXT_WHITE};
     min-width: 80px;
 }}
@@ -243,8 +241,8 @@ QSpinBox, QDoubleSpinBox {{
     background-color: {Theme.INPUT_BG};
     border: 1px solid {Theme.INPUT_BORDER};
     border-radius: {Theme.RADIUS}px;
-    min-height: {inline.min_height}px;
-    padding: 2px 24px 2px 8px;
+    min-height: {default.min_height}px;
+    padding: 3px 24px 3px 10px;
     color: {Theme.TEXT_WHITE};
     selection-background-color: {Theme.ACCENT};
     selection-color: {Theme.TEXT_WHITE};
@@ -375,18 +373,41 @@ QScrollArea {{
 QScrollArea > QWidget > QWidget {{
     background: transparent;
 }}
+QScrollBar:horizontal, QScrollBar:vertical {{
+    background: transparent;
+    border: none;
+    width: 0;
+    height: 0;
+}}
+QScrollBar::handle:horizontal, QScrollBar::handle:vertical {{
+    background: transparent;
+    border: none;
+    min-width: 0;
+    min-height: 0;
+}}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    width: 0;
+    height: 0;
+    border: none;
+    background: transparent;
+}}
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal,
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: transparent;
+}}
 QScrollBar:vertical {{
     background: {Theme.BG_DARK};
-    width: 8px;
+    width: 0;
     border: none;
 }}
 QScrollBar::handle:vertical {{
-    background: {Theme.BORDER_HOVER};
+    background: transparent;
     border-radius: 4px;
-    min-height: 20px;
+    min-height: 0;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: {Theme.INPUT_BORDER_HOVER};
+    background: transparent;
 }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
     height: 0;

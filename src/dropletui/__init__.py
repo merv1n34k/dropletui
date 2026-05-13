@@ -17,6 +17,7 @@ from dropletui.containers import (
     vertical_splitter,
 )
 from dropletui.controls import (
+    DropletSlider,
     apply_button_style,
     button,
     check_box,
@@ -24,6 +25,7 @@ from dropletui.controls import (
     double_box,
     int_box,
     line_edit,
+    slider,
     stage_button,
 )
 from dropletui.status import metric_readout, status_label
@@ -42,6 +44,7 @@ __all__ = [
     "create_app",
     "double_box",
     "DropletSplitter",
+    "DropletSlider",
     "form_panel",
     "hbox",
     "horizontal_splitter",
@@ -52,6 +55,7 @@ __all__ = [
     "section",
     "separator",
     "side_panel",
+    "slider",
     "split_view",
     "splitter",
     "stage_button",

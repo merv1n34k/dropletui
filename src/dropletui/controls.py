@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import Literal
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QStyle
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -13,12 +14,104 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSpinBox,
+    QSlider,
 )
 
 from dropletui.theme import Theme, button_qss, control_size
 
 ButtonVariant = Literal["neutral", "primary", "success", "danger", "warning"]
 ControlSize = Literal["inline", "default", "large", "stage"]
+
+
+class DropletSlider(QSlider):
+    """Slider that treats step as valid value granularity, including mouse drags."""
+
+    def __init__(self, orientation: Qt.Orientation = Qt.Orientation.Horizontal) -> None:
+        super().__init__(orientation)
+        self._step = 1
+
+    def setSingleStep(self, step: int) -> None:  # noqa: N802
+        self._step = max(1, int(step))
+        super().setSingleStep(self._step)
+
+    def setValue(self, value: int) -> None:  # noqa: N802
+        super().setValue(self._snap(value))
+
+    def setRange(self, minimum: int, maximum: int) -> None:  # noqa: N802
+        super().setRange(minimum, maximum)
+        self.setValue(self.value())
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setValue(self._value_from_position(event.position()))
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            self.setValue(self._value_from_position(event.position()))
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def wheelEvent(self, event) -> None:  # noqa: N802
+        direction = 1 if event.angleDelta().y() > 0 else -1
+        self.setValue(self.value() + direction * self._step)
+        event.accept()
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802
+        key = event.key()
+        if key in {Qt.Key.Key_Left, Qt.Key.Key_Down}:
+            self.setValue(self.value() - self._step)
+            event.accept()
+            return
+        if key in {Qt.Key.Key_Right, Qt.Key.Key_Up}:
+            self.setValue(self.value() + self._step)
+            event.accept()
+            return
+        if key == Qt.Key.Key_PageDown:
+            self.setValue(self.value() - self.pageStep())
+            event.accept()
+            return
+        if key == Qt.Key.Key_PageUp:
+            self.setValue(self.value() + self.pageStep())
+            event.accept()
+            return
+        if key == Qt.Key.Key_Home:
+            self.setValue(self.minimum())
+            event.accept()
+            return
+        if key == Qt.Key.Key_End:
+            self.setValue(self.maximum())
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def _snap(self, value: int) -> int:
+        minimum = self.minimum()
+        maximum = self.maximum()
+        snapped = minimum + round((int(value) - minimum) / self._step) * self._step
+        while snapped > maximum:
+            snapped -= self._step
+        return max(minimum, snapped)
+
+    def _value_from_position(self, position) -> int:
+        if self.orientation() == Qt.Orientation.Horizontal:
+            pos = int(position.x())
+            span = max(1, self.width())
+        else:
+            pos = int(position.y())
+            span = max(1, self.height())
+
+        value = QStyle.sliderValueFromPosition(
+            self.minimum(),
+            self.maximum(),
+            pos,
+            span,
+            self.invertedAppearance(),
+        )
+        return self._snap(value)
 
 
 def apply_button_style(
@@ -29,6 +122,8 @@ def apply_button_style(
     flat: bool = False,
 ) -> QPushButton:
     widget.setStyleSheet(button_qss(variant, size=size, flat=flat))
+    if not flat:
+        _apply_control_height(widget, size)
     return widget
 
 
@@ -58,9 +153,11 @@ def line_edit(
     *,
     placeholder: str = "",
     width: int | None = None,
+    size: ControlSize = "default",
 ) -> QLineEdit:
     widget = QLineEdit(text)
     widget.setPlaceholderText(placeholder)
+    _apply_control_height(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
@@ -74,12 +171,14 @@ def int_box(
     step: int = 1,
     suffix: str = "",
     width: int | None = None,
+    size: ControlSize = "default",
 ) -> QSpinBox:
     widget = QSpinBox()
     widget.setRange(minimum, maximum)
     widget.setValue(value)
     widget.setSingleStep(step)
     widget.setSuffix(suffix)
+    _apply_control_height(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
@@ -94,6 +193,7 @@ def double_box(
     decimals: int = 2,
     suffix: str = "",
     width: int | None = None,
+    size: ControlSize = "default",
 ) -> QDoubleSpinBox:
     widget = QDoubleSpinBox()
     widget.setRange(minimum, maximum)
@@ -101,16 +201,41 @@ def double_box(
     widget.setSingleStep(step)
     widget.setDecimals(decimals)
     widget.setSuffix(suffix)
+    _apply_control_height(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
 
 
-def combo_box(items: Iterable[str] = (), *, width: int | None = None) -> QComboBox:
+def combo_box(
+    items: Iterable[str] = (),
+    *,
+    width: int | None = None,
+    size: ControlSize = "default",
+) -> QComboBox:
     widget = QComboBox()
     widget.addItems(list(items))
+    _apply_control_height(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
+    return widget
+
+
+def slider(
+    *,
+    orientation: Qt.Orientation = Qt.Orientation.Horizontal,
+    minimum: int = 0,
+    maximum: int = 100,
+    value: int = 0,
+    step: int = 1,
+    page_step: int | None = None,
+) -> QSlider:
+    widget = DropletSlider(orientation)
+    widget.setRange(minimum, maximum)
+    widget.setSingleStep(step)
+    widget.setPageStep(page_step if page_step is not None else step)
+    widget.setValue(value)
+    widget.setMinimumHeight(Theme.CONTROL_DEFAULT.min_height)
     return widget
 
 
@@ -143,3 +268,9 @@ def apply_stage_state(widget: QPushButton, *, active: bool, enabled: bool = True
         f"QPushButton:hover {{ background-color: {Theme.BG_CONTROL_HOVER}; }}"
     )
     widget.setCursor(Qt.CursorShape.PointingHandCursor if enabled else Qt.CursorShape.ArrowCursor)
+
+
+def _apply_control_height(widget, size: ControlSize) -> None:
+    token = control_size(size)
+    widget.setMinimumHeight(token.min_height)
+    widget.setMaximumHeight(token.min_height)
