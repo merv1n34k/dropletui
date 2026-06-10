@@ -11,13 +11,16 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
+    QHBoxLayout,
     QLineEdit,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QSlider,
+    QWidget,
 )
 
-from dropletui.theme import Theme, button_qss, control_size
+from dropletui.theme import Theme, button_qss, control_size, spacing
 
 ButtonVariant = Literal["neutral", "primary", "success", "danger", "warning"]
 ControlSize = Literal["inline", "default", "large", "stage"]
@@ -123,7 +126,7 @@ def apply_button_style(
 ) -> QPushButton:
     widget.setStyleSheet(button_qss(variant, size=size, flat=flat))
     if not flat:
-        _apply_control_height(widget, size)
+        apply_control_size(widget, size)
     return widget
 
 
@@ -142,10 +145,31 @@ def button(
 
 
 def stage_button(text: str, *, active: bool = False, enabled: bool = True) -> QPushButton:
-    widget = button(text, variant="primary" if active else "neutral", size="stage", checkable=True)
-    widget.setChecked(active)
-    widget.setEnabled(enabled)
+    widget = button(text, checkable=True)
+    apply_stage_state(widget, active=active, enabled=enabled)
+    widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     return widget
+
+
+def segmented_control(
+    items: Iterable[str],
+    *,
+    active_index: int = 0,
+    enabled_until: int | None = None,
+    size: ControlSize = "default",
+) -> QWidget:
+    container = QWidget()
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+
+    for index, item in enumerate(items):
+        enabled = enabled_until is None or index <= enabled_until
+        widget = button(item, size=size, checkable=True)
+        apply_stage_state(widget, active=index == active_index, enabled=enabled, size=size)
+        widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout.addWidget(widget, 1)
+    return container
 
 
 def line_edit(
@@ -157,7 +181,7 @@ def line_edit(
 ) -> QLineEdit:
     widget = QLineEdit(text)
     widget.setPlaceholderText(placeholder)
-    _apply_control_height(widget, size)
+    apply_control_size(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
@@ -178,7 +202,7 @@ def int_box(
     widget.setValue(value)
     widget.setSingleStep(step)
     widget.setSuffix(suffix)
-    _apply_control_height(widget, size)
+    apply_control_size(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
@@ -201,7 +225,7 @@ def double_box(
     widget.setSingleStep(step)
     widget.setDecimals(decimals)
     widget.setSuffix(suffix)
-    _apply_control_height(widget, size)
+    apply_control_size(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
@@ -215,7 +239,7 @@ def combo_box(
 ) -> QComboBox:
     widget = QComboBox()
     widget.addItems(list(items))
-    _apply_control_height(widget, size)
+    apply_control_size(widget, size)
     if width is not None:
         widget.setFixedWidth(width)
     return widget
@@ -235,7 +259,7 @@ def slider(
     widget.setSingleStep(step)
     widget.setPageStep(page_step if page_step is not None else step)
     widget.setValue(value)
-    widget.setMinimumHeight(Theme.CONTROL_DEFAULT.min_height)
+    apply_control_size(widget, "default")
     return widget
 
 
@@ -245,10 +269,16 @@ def check_box(text: str, *, checked: bool = False) -> QCheckBox:
     return widget
 
 
-def apply_stage_state(widget: QPushButton, *, active: bool, enabled: bool = True) -> None:
+def apply_stage_state(
+    widget: QPushButton,
+    *,
+    active: bool,
+    enabled: bool = True,
+    size: ControlSize = "default",
+) -> None:
     widget.setEnabled(enabled)
     widget.setChecked(active)
-    token = control_size("stage")
+    token = control_size(size)
     if active:
         bg = Theme.ACCENT
         color = Theme.TEXT_WHITE
@@ -263,14 +293,21 @@ def apply_stage_state(widget: QPushButton, *, active: bool, enabled: bool = True
         weight = "400"
     widget.setStyleSheet(
         f"QPushButton {{ background-color: {bg}; color: {color}; border: none; "
-        f"border-radius: 0; min-height: {token.min_height}px; padding: {token.padding}; "
+        f"border-radius: 0; min-height: {token.height}px; max-height: {token.height}px; "
+        "padding: 0; "
         f"font-size: {token.font_size}px; font-weight: {weight}; }}"
         f"QPushButton:hover {{ background-color: {Theme.BG_CONTROL_HOVER}; }}"
     )
+    apply_control_size(widget, size)
     widget.setCursor(Qt.CursorShape.PointingHandCursor if enabled else Qt.CursorShape.ArrowCursor)
 
 
-def _apply_control_height(widget, size: ControlSize) -> None:
+def apply_control_size(widget: QWidget, size: ControlSize = "default") -> QWidget:
     token = control_size(size)
-    widget.setMinimumHeight(token.min_height)
-    widget.setMaximumHeight(token.min_height)
+    widget.setMinimumHeight(token.height)
+    widget.setMaximumHeight(token.height)
+    return widget
+
+
+def apply_control_gap(layout, value: str | int = "control") -> None:
+    layout.setSpacing(spacing(value))

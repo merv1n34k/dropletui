@@ -1,6 +1,6 @@
 [project]
 name = "dropletui"
-version = "0.1.1"
+version = "0.1.2"
 description = "Shared PySide6 UI components for droplet desktop applications"
 readme = "README.md"
 license = "MIT"

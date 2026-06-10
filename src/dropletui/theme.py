@@ -7,9 +7,18 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class _ControlSize:
-    min_height: int
-    padding: str
+    height: int
+    padding_x: int
+    padding_y: int
     font_size: int
+
+    @property
+    def min_height(self) -> int:
+        return self.height
+
+    @property
+    def padding(self) -> str:
+        return f"{self.padding_y}px {self.padding_x}px"
 
 
 class Theme:
@@ -56,22 +65,39 @@ class Theme:
     FONT_SIZE_BODY = 13
     FONT_SIZE_TITLE = 16
 
+    SPACE_0 = 0
     SPACE_1 = 4
-    SPACE_2 = 6
-    SPACE_3 = 8
-    SPACE_4 = 12
+    SPACE_2 = 8
+    SPACE_3 = 12
+    SPACE_4 = 16
+    SPACE_5 = 24
+    CONTROL_GAP = SPACE_1
+    GROUP_GAP = SPACE_2
+    SECTION_GAP = SPACE_3
     WINDOW_PADDING = SPACE_4
-    PANEL_PADDING = 10
+    PANEL_PADDING = SPACE_3
     SPLITTER_PADDING = SPACE_2
     RADIUS = 4
     SPLITTER_HANDLE_WIDTH = 12
-    SPLITTER_MARK_THICKNESS = 5
+    SPLITTER_MARK_THICKNESS = 4
     SPLITTER_MARK_LENGTH_RATIO = 0.5
     SEPARATOR_THICKNESS = SPLITTER_MARK_THICKNESS
-    CONTROL_INLINE = _ControlSize(min_height=24, padding="2px 8px", font_size=FONT_SIZE_BODY)
-    CONTROL_DEFAULT = _ControlSize(min_height=26, padding="3px 10px", font_size=FONT_SIZE_BODY)
-    CONTROL_LARGE = _ControlSize(min_height=36, padding="8px 14px", font_size=FONT_SIZE_BODY)
-    CONTROL_STAGE = _ControlSize(min_height=56, padding="10px 16px", font_size=FONT_SIZE_BODY)
+    CONTROL_INLINE = _ControlSize(height=20, padding_x=0, padding_y=0, font_size=FONT_SIZE_BODY)
+    CONTROL_DEFAULT = _ControlSize(height=22, padding_x=0, padding_y=0, font_size=FONT_SIZE_BODY)
+    CONTROL_LARGE = _ControlSize(height=28, padding_x=0, padding_y=0, font_size=FONT_SIZE_BODY)
+    CONTROL_STAGE = _ControlSize(height=22, padding_x=0, padding_y=0, font_size=FONT_SIZE_BODY)
+
+
+SPACING = {
+    "none": Theme.SPACE_0,
+    "tight": Theme.SPACE_1,
+    "control": Theme.CONTROL_GAP,
+    "default": Theme.GROUP_GAP,
+    "group": Theme.GROUP_GAP,
+    "section": Theme.SECTION_GAP,
+    "panel": Theme.PANEL_PADDING,
+    "window": Theme.WINDOW_PADDING,
+}
 
 
 STATUS_COLORS = {
@@ -105,6 +131,25 @@ def control_size(size: str = "default") -> _ControlSize:
     }.get(size, Theme.CONTROL_DEFAULT)
 
 
+def spacing(value: str | int | None = "default") -> int:
+    if value is None:
+        return Theme.SPACE_0
+    if isinstance(value, int):
+        return value
+    return SPACING.get(value, Theme.GROUP_GAP)
+
+
+def box_padding(value: str | int | tuple[int, int, int, int] | None = "none") -> tuple[int, int, int, int]:
+    if isinstance(value, tuple):
+        return value
+    pad = spacing(value)
+    return pad, pad, pad, pad
+
+
+def control_padding(size: str = "default", *, right_extra: int = 0) -> str:
+    return "0"
+
+
 def text_qss(
     kind: str = "default",
     *,
@@ -126,11 +171,10 @@ def button_qss(kind: str = "neutral", *, size: str = "default", flat: bool = Fal
     bg, hover = BUTTON_COLORS.get(kind, BUTTON_COLORS["neutral"])
     token = control_size(size)
     radius = "0" if flat else f"{Theme.RADIUS}px"
-    padding = "0" if flat else token.padding
-    height = "" if flat else f"min-height: {token.min_height}px; max-height: {token.min_height}px;"
+    height = "" if flat else f"min-height: {token.height}px; max-height: {token.height}px;"
     return (
         f"QPushButton {{ background-color: {bg}; border: none; color: {Theme.TEXT_WHITE}; "
-        f"border-radius: {radius}; padding: {padding}; font-size: {token.font_size}px; "
+        f"border-radius: {radius}; padding: 0; font-size: {token.font_size}px; "
         f"font-weight: 600; {height} }}"
         f"QPushButton:hover {{ background-color: {hover}; }}"
         f"QPushButton:pressed {{ background-color: {Theme.BG_CONTROL_PRESSED}; }}"
@@ -139,7 +183,8 @@ def button_qss(kind: str = "neutral", *, size: str = "default", flat: bool = Fal
     )
 
 
-def value_label_qss(kind: str = "success", *, padding: str = "8px 10px") -> str:
+def value_label_qss(kind: str = "success", *, padding: str | None = None) -> str:
+    padding = padding if padding is not None else control_size("default").padding
     return f"background: {Theme.BG_DARKER}; {text_qss(kind, padding=padding)}"
 
 
@@ -175,12 +220,20 @@ QMainWindow {{
 QLabel {{
     background: transparent;
 }}
-QLineEdit, QTextEdit, QPlainTextEdit {{
+QLineEdit {{
     background-color: {Theme.INPUT_BG};
     border: 1px solid {Theme.INPUT_BORDER};
     border-radius: {Theme.RADIUS}px;
-    min-height: {default.min_height}px;
-    padding: {default.padding};
+    min-height: {default.height}px;
+    max-height: {default.height}px;
+    padding: 0;
+    color: {Theme.TEXT_WHITE};
+}}
+QTextEdit, QPlainTextEdit {{
+    background-color: {Theme.INPUT_BG};
+    border: 1px solid {Theme.INPUT_BORDER};
+    border-radius: {Theme.RADIUS}px;
+    padding: 0;
     color: {Theme.TEXT_WHITE};
 }}
 QLineEdit:hover, QTextEdit:hover, QPlainTextEdit:hover {{
@@ -193,8 +246,9 @@ QPushButton {{
     background-color: {Theme.BG_CONTROL};
     border: none;
     border-radius: {Theme.RADIUS}px;
-    min-height: {default.min_height}px;
-    padding: {default.padding};
+    min-height: {default.height}px;
+    max-height: {default.height}px;
+    padding: 0;
     color: {Theme.TEXT_WHITE};
     font-weight: 600;
 }}
@@ -212,8 +266,9 @@ QComboBox {{
     background-color: {Theme.INPUT_BG};
     border: 1px solid {Theme.INPUT_BORDER};
     border-radius: {Theme.RADIUS}px;
-    min-height: {default.min_height}px;
-    padding: {default.padding};
+    min-height: {default.height}px;
+    max-height: {default.height}px;
+    padding: 0;
     color: {Theme.TEXT_WHITE};
     min-width: 80px;
 }}
@@ -241,8 +296,9 @@ QSpinBox, QDoubleSpinBox {{
     background-color: {Theme.INPUT_BG};
     border: 1px solid {Theme.INPUT_BORDER};
     border-radius: {Theme.RADIUS}px;
-    min-height: {default.min_height}px;
-    padding: 3px 24px 3px 10px;
+    min-height: {default.height}px;
+    max-height: {default.height}px;
+    padding: 0;
     color: {Theme.TEXT_WHITE};
     selection-background-color: {Theme.ACCENT};
     selection-color: {Theme.TEXT_WHITE};
@@ -289,7 +345,7 @@ QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{
     height: 7px;
 }}
 QCheckBox {{
-    spacing: 6px;
+    spacing: {Theme.CONTROL_GAP}px;
     background: transparent;
 }}
 QCheckBox::indicator {{
@@ -308,16 +364,16 @@ QCheckBox::indicator:checked {{
 }}
 QGroupBox {{
     border: 1px solid {Theme.INPUT_BORDER};
-    border-radius: 6px;
-    margin-top: 8px;
-    padding-top: 14px;
+    border-radius: {Theme.RADIUS}px;
+    margin-top: {Theme.GROUP_GAP}px;
+    padding-top: {Theme.SECTION_GAP}px;
     font-weight: 600;
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    left: 10px;
-    padding: 0 6px;
+    left: {Theme.PANEL_PADDING}px;
+    padding: 0 {Theme.CONTROL_GAP}px;
     color: {Theme.ACCENT};
 }}
 QTabWidget::pane {{
@@ -328,7 +384,7 @@ QTabBar::tab {{
     background: {Theme.BG_MEDIUM};
     border: none;
     border-bottom: 2px solid transparent;
-    padding: 7px 16px;
+    padding: {Theme.SPACE_2}px {Theme.SPACE_4}px;
     color: {Theme.TEXT_MUTED};
     border-top-left-radius: {Theme.RADIUS}px;
     border-top-right-radius: {Theme.RADIUS}px;

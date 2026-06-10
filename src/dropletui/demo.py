@@ -5,10 +5,9 @@ from __future__ import annotations
 import sys
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QMainWindow, QVBoxLayout, QWidget
 
 import dropletui as ui
-from dropletui.controls import apply_stage_state
 
 
 class DemoWindow(QMainWindow):
@@ -26,7 +25,7 @@ class DemoWindow(QMainWindow):
             ui.Theme.WINDOW_PADDING,
             ui.Theme.WINDOW_PADDING,
         )
-        root.setSpacing(6)
+        root.setSpacing(ui.spacing("group"))
 
         side_toggle = ui.button("Hide Side", variant="neutral")
         bottom_toggle = ui.button("Hide Bottom", variant="neutral")
@@ -42,26 +41,38 @@ class DemoWindow(QMainWindow):
             )
         )
 
-        stages = QHBoxLayout()
-        stages.setSpacing(1)
-        for i, label in enumerate(["1. Geometry", "2. Edges", "3. Phase", "4. Simulate"]):
-            btn = ui.stage_button(label, active=i == 0, enabled=i < 3)
-            apply_stage_state(btn, active=i == 0, enabled=i < 3)
-            stages.addWidget(btn, 1)
-        root.addLayout(stages)
+        root.addWidget(
+            ui.segmented_control(
+                ["1. Geometry", "2. Edges", "3. Phase", "4. Simulate"],
+                active_index=0,
+                enabled_until=2,
+            )
+        )
 
         controls_panel, controls_panel_layout = ui.side_panel(minimum_width=260)
         controls, controls_layout = ui.section("Controls")
-        controls_layout.addWidget(ui.line_edit(placeholder="Pipeline name"))
-        controls_layout.addWidget(ui.int_box(minimum=0, maximum=1000, value=50, suffix=" steps"))
-        controls_layout.addWidget(ui.double_box(value=2.5, suffix=" um", decimals=2))
-        controls_layout.addWidget(ui.combo_box(["Oil", "Cells", "Beads"]))
+        controls_layout.addWidget(
+            ui.control_row("Name", ui.line_edit(placeholder="Pipeline name"), label_width=64)
+        )
+        controls_layout.addWidget(
+            ui.control_row(
+                "Steps",
+                ui.int_box(minimum=0, maximum=1000, value=50, suffix=" steps"),
+                label_width=64,
+            )
+        )
+        controls_layout.addWidget(
+            ui.control_row("Offset", ui.double_box(value=2.5, suffix=" um", decimals=2), label_width=64)
+        )
+        controls_layout.addWidget(
+            ui.control_row("Phase", ui.combo_box(["Oil", "Cells", "Beads"]), label_width=64)
+        )
         offset_slider = ui.slider(maximum=4096, value=640, step=16)
         offset_value = ui.status_label(str(offset_slider.value()), kind="primary")
         offset_value.setMinimumWidth(44)
         offset_slider.valueChanged.connect(lambda value: offset_value.setText(str(value)))
-        controls_layout.addWidget(ui.hbox(offset_slider, offset_value, spacing=ui.Theme.SPACE_2))
-        controls_layout.addWidget(ui.button("Apply", variant="primary"))
+        controls_layout.addWidget(ui.field_row(offset_slider, offset_value))
+        controls_layout.addWidget(ui.button_row(ui.button("Apply", variant="primary")))
         controls_panel_layout.addWidget(controls)
         controls_panel_layout.addStretch()
 

@@ -20,7 +20,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from dropletui.theme import Theme
+from dropletui.theme import Theme, box_padding, spacing
+
+Spacing = str | int
+Padding = str | int | tuple[int, int, int, int] | None
 
 
 class DropletSplitterHandle(QSplitterHandle):
@@ -141,43 +144,54 @@ class DropletSplitter(QSplitter):
         return panel_index
 
 
-def hbox(*widgets: QWidget, spacing: int = Theme.SPACE_2, margins: int = 0) -> QWidget:
+def hbox(
+    *widgets: QWidget,
+    spacing: Spacing = "control",
+    margins: Padding = "none",
+    stretch: int | None = None,
+) -> QWidget:
     container = QWidget()
     layout = QHBoxLayout(container)
-    layout.setContentsMargins(margins, margins, margins, margins)
-    layout.setSpacing(spacing)
+    layout.setContentsMargins(*box_padding(margins))
+    layout.setSpacing(_gap(spacing))
     for widget in widgets:
-        layout.addWidget(widget)
+        layout.addWidget(widget, stretch or 0)
     return container
 
 
-def vbox(*widgets: QWidget, spacing: int = Theme.SPACE_2, margins: int = 0) -> QWidget:
+def vbox(
+    *widgets: QWidget,
+    spacing: Spacing = "group",
+    margins: Padding = "none",
+    stretch: int | None = None,
+) -> QWidget:
     container = QWidget()
     layout = QVBoxLayout(container)
-    layout.setContentsMargins(margins, margins, margins, margins)
-    layout.setSpacing(spacing)
+    layout.setContentsMargins(*box_padding(margins))
+    layout.setSpacing(_gap(spacing))
     for widget in widgets:
-        layout.addWidget(widget)
+        layout.addWidget(widget, stretch or 0)
     return container
 
 
-def section(title: str, *, spacing: int = Theme.SPACE_2) -> tuple[QGroupBox, QVBoxLayout]:
+def section(title: str, *, spacing: Spacing = "group") -> tuple[QGroupBox, QVBoxLayout]:
     group = QGroupBox(title)
     layout = QVBoxLayout(group)
-    layout.setContentsMargins(
-        Theme.PANEL_PADDING,
-        Theme.PANEL_PADDING,
-        Theme.PANEL_PADDING,
-        Theme.PANEL_PADDING,
-    )
-    layout.setSpacing(spacing)
+    layout.setContentsMargins(*box_padding("panel"))
+    layout.setSpacing(_gap(spacing))
     return group, layout
 
 
-def form_panel(title: str, rows: Iterable[tuple[str, QWidget]]) -> QGroupBox:
+def form_panel(
+    title: str,
+    rows: Iterable[tuple[str, QWidget]],
+    *,
+    spacing: Spacing = "group",
+) -> QGroupBox:
     group = QGroupBox(title)
     layout = QFormLayout(group)
-    layout.setSpacing(Theme.SPACE_2)
+    layout.setContentsMargins(*box_padding("panel"))
+    layout.setSpacing(_gap(spacing))
     for label, widget in rows:
         layout.addRow(label, widget)
     return group
@@ -185,8 +199,8 @@ def form_panel(title: str, rows: Iterable[tuple[str, QWidget]]) -> QGroupBox:
 
 def side_panel(
     *widgets: QWidget,
-    spacing: int = Theme.SPACE_2,
-    margins: int = Theme.PANEL_PADDING,
+    spacing: Spacing = "group",
+    margins: Padding = "panel",
     minimum_width: int | None = None,
     maximum_width: int | None = None,
 ) -> tuple[QWidget, QVBoxLayout]:
@@ -200,8 +214,8 @@ def side_panel(
         panel.setMaximumWidth(maximum_width)
 
     layout = QVBoxLayout(panel)
-    layout.setContentsMargins(margins, margins, margins, margins)
-    layout.setSpacing(spacing)
+    layout.setContentsMargins(*box_padding(margins))
+    layout.setSpacing(_gap(spacing))
     for widget in widgets:
         layout.addWidget(widget)
     return panel, layout
@@ -362,10 +376,10 @@ def _splitter_pane(widget: QWidget, margins: int) -> QWidget:
 
 def toolbar(title: str, *widgets: QWidget) -> QWidget:
     container = QWidget()
-    container.setMinimumHeight(44)
+    container.setMinimumHeight(Theme.CONTROL_LARGE.height + Theme.SPACE_2)
     layout = QHBoxLayout(container)
-    layout.setContentsMargins(Theme.SPACE_3, Theme.SPACE_2, Theme.SPACE_3, Theme.SPACE_2)
-    layout.setSpacing(Theme.SPACE_2)
+    layout.setContentsMargins(*box_padding((Theme.SPACE_2, Theme.SPACE_1, Theme.SPACE_2, Theme.SPACE_1)))
+    layout.setSpacing(_gap("control"))
 
     title_label = QLabel(title)
     font = QFont()
@@ -373,11 +387,58 @@ def toolbar(title: str, *widgets: QWidget) -> QWidget:
     font.setWeight(QFont.Weight.DemiBold)
     title_label.setFont(font)
     layout.addWidget(title_label)
-    layout.addSpacing(Theme.SPACE_4)
+    layout.addSpacing(_gap("section"))
 
     for widget in widgets:
         layout.addWidget(widget)
     layout.addStretch()
+    return container
+
+
+def button_row(*buttons: QWidget, align: str = "right", spacing: Spacing = "control") -> QWidget:
+    container = QWidget()
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(*box_padding("none"))
+    layout.setSpacing(_gap(spacing))
+    if align in {"right", "center"}:
+        layout.addStretch()
+    for button in buttons:
+        layout.addWidget(button)
+    if align in {"left", "center"}:
+        layout.addStretch()
+    return container
+
+
+def control_row(
+    label: str | QWidget,
+    control: QWidget,
+    action: QWidget | None = None,
+    *,
+    spacing: Spacing = "control",
+    label_width: int | None = None,
+) -> QWidget:
+    container = QWidget()
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(*box_padding("none"))
+    layout.setSpacing(_gap(spacing))
+
+    label_widget = QLabel(label) if isinstance(label, str) else label
+    if label_width is not None:
+        label_widget.setFixedWidth(label_width)
+    layout.addWidget(label_widget)
+    layout.addWidget(control, 1)
+    if action is not None:
+        layout.addWidget(action)
+    return container
+
+
+def field_row(*widgets: QWidget, spacing: Spacing = "control") -> QWidget:
+    container = QWidget()
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(*box_padding("none"))
+    layout.setSpacing(_gap(spacing))
+    for widget in widgets:
+        layout.addWidget(widget)
     return container
 
 
@@ -388,3 +449,7 @@ def clear_layout(layout: QLayout) -> None:
             item.widget().deleteLater()
         elif item.layout() is not None:
             clear_layout(item.layout())
+
+
+def _gap(value: Spacing) -> int:
+    return spacing(value)

@@ -55,6 +55,16 @@ window.show()
 app.exec()
 ```
 
+For aligned controls, prefer the semantic row helpers over hand-tuned layout
+spacing:
+
+```python
+panel, layout = ui.section("Controls")
+layout.addWidget(ui.control_row("Name", ui.line_edit(), label_width=64))
+layout.addWidget(ui.control_row("Mode", ui.combo_box(["A", "B"]), label_width=64))
+layout.addWidget(ui.button_row(ui.button("Apply", variant="primary")))
+```
+
 ## Release
 
 Publishing to PyPI is handled by the `Publish to PyPI` GitHub Actions workflow when
