@@ -1,5 +1,8 @@
 # dropletui
 
+> [!Warning]
+> The project is no longer supported, use project at your own risk. The replacement software is TBA.
+
 Shared PySide6 UI components for the droplet desktop applications.
 
 `dropletui` centralizes theme tokens, application setup, controls, panels, splitters,
